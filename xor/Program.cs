@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Xml.Schema;
 
 namespace xor
 {
@@ -8,11 +9,11 @@ namespace xor
         public static void Main()
         {
             string path = "..//Lamp.txt";
-            FileWorker.GetTableInfo(path);
+            ConsoleWorker.DrawTable(path);
         }
     }
 
-    class FileWorker // TODO х и у надо сюда 
+    class FileWorker 
     {
         private static string[] FIleReader(string path)
         {
@@ -30,31 +31,38 @@ namespace xor
             
             return (x, y, scale);
         }
+
+        public static (int, int, string) GetLampInfo(string path, int i)
+        {
+            string[] file = FIleReader(path);
+            (string x, string y, string scale) = GetTableInfo(path);
+            
+            string lampInfo = file[i];
+            
+            int lampX = Convert.ToInt32(lampInfo.Substring(0, x.Length));
+            int lampY = Convert.ToInt32(lampInfo.Substring(x.Length, y.Length));
+            string rgb = lampInfo.Substring(x.Length + y.Length, 3);
+
+            return (lampX, lampY, rgb);
+        }
     }
 
     class ConsoleWorker
     {
-        public void DrawTable(string path)
+        public static void DrawTable(string path)
         {
-            string[] file = File.ReadAllLines(path);
-            string[] table = file[0].Split('x', 'X', 'х', 'Х');
-            string x = table[0];
-            string y = table[1];
+            (string x, string y, string scale) = FileWorker.GetTableInfo(path);
             
-            for (int i = 1; i < file.Length; i++)
+            for (int i = 1; i < Convert.ToInt32(x) * Convert.ToInt32(y); i++)
             {
-                string lamp = file[i];
-                int curX = Convert.ToInt32(lamp.Substring(0, x.Length));
-                int curY = Convert.ToInt32(lamp.Substring(x.Length, y.Length));
-                string rgb = lamp.Substring(x.Length + y.Length, 3);
-                ColourChanger(curX, curY, rgb);
+                (int lampX, int lampY, string rgb) = FileWorker.GetLampInfo(path, i);
+                ColourChanger(lampX, lampY, rgb, Convert.ToInt32(scale));
             }
-            
         }
         
         private static ConsoleColor ConvertFromRGB(byte r, byte g, byte b)
         {
-            ConsoleColor trueColor = 0;
+            ConsoleColor ret = 0;
             double red = r;
             double green = g;
             double blue = b;
@@ -62,53 +70,34 @@ namespace xor
 
             foreach (ConsoleColor consoleColor in Enum.GetValues(typeof(ConsoleColor)))
             {
-                string name = Enum.GetName(typeof(ConsoleColor), consoleColor);
-                Color color = System.Drawing.Color.FromName(name == "DarkYellow" ? "Orange" : name); // bug fix
-                double toConsoleColor = Math.Pow(color.R - red, 2.0) + Math.Pow(color.G - green, 2.0) + Math.Pow(color.B - blue, 2.0);
-                
-                if (toConsoleColor == 0.0)
+                string n = Enum.GetName(typeof(ConsoleColor), consoleColor);
+                Color color = System.Drawing.Color.FromName(n == "DarkYellow" ? "Orange" : n); 
+                double t = Math.Pow(color.R - red, 2.0) + Math.Pow(color.G - green, 2.0) + Math.Pow(color.B - blue, 2.0);
+                if (t == 0.0)
                     return consoleColor;
-                
-                if (toConsoleColor < delta)
+                if (t < delta)
                 {
-                    delta = toConsoleColor;
-                    trueColor = consoleColor;
+                    delta = t;
+                    ret = consoleColor;
                 }
-                
             }
             
-            return trueColor;
+            return ret;
         }
 
-        public void ColourChanger(int x, int y, string rgb)
+        public static void ColourChanger(int x, int y, string rgb, int scale)
         {
-            string a = "█";
-            Color color = Color.FromArgb();
-            Console.ForegroundColor = color.ToArgb();
-            switch (rgb) //TODO rgb вынеси
-            {
-                case "111":
-                    break;
-                case "100":
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    break;
-                case "010":
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    break;
-                case "000":
-                    Console.ForegroundColor = ConsoleColor.Black;
-                    break;
-                case "001":
-                    Console.ForegroundColor = ConsoleColor.Blue;
-                    break;
-            }
+            string lamp = "█";
+            char[] ground = rgb.ToCharArray();
+            Color color = Color.FromArgb(Convert.ToInt32(ground[0].ToString()), Convert.ToInt32(ground[1].ToString()), Convert.ToInt32(ground[2].ToString()));
+            Console.ForegroundColor = ConvertFromRGB(color.R, color.G, color.B);
             
-            for (int j = 0; j < 2; j++)
+            for (int j = 0; j < scale/2; j++)
             {
-                Console.SetCursorPosition(x * 4, y * 4 / 2 + j); //TODO 
-                for (int i = 0; i < 4; i++)
+                Console.SetCursorPosition(x * scale, y * scale / 2 + j);
+                for (int i = 0; i < scale; i++)
                 {
-                    Console.Write(a);
+                    Console.Write(lamp);
                 }
             }
             
